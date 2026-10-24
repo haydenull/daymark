@@ -5,10 +5,11 @@ import { drizzle } from 'drizzle-orm/bun-sqlite'
 
 import { ENV } from '@/env'
 
+import * as authSchema from './auth-schema'
 import * as schema from './schema'
 
 mkdirSync(dirname(ENV.DB_FILE_NAME), { recursive: true })
 
 export const sqlite = new Database(ENV.DB_FILE_NAME, { create: true })
 
-export const db = drizzle({ client: sqlite, schema })
+export const db = drizzle({ client: sqlite, schema: { ...schema, ...authSchema } })

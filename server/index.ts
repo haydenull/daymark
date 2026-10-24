@@ -4,7 +4,9 @@ import { serveStatic } from 'hono/bun'
 import { HTTPException } from 'hono/http-exception'
 import { logger } from 'hono/logger'
 
+import { me } from './api/me'
 import { todo } from './api/todo'
+import { auth } from './auth'
 
 const app = new OpenAPIHono()
 
@@ -21,6 +23,7 @@ app.onError((err, c) => {
 app.get('/api/health', (c) => c.json({ ok: true }))
 
 app.route('/', todo)
+app.route('/', me)
 
 app.doc('/api/openapi.json', {
   openapi: '3.0.0',
@@ -39,6 +42,8 @@ app.get(
     spec: { url: '/api/openapi.json' },
   }),
 )
+
+app.all('/api/auth/*', (c) => auth.handler(c.req.raw))
 
 app.get('*', serveStatic({ root: './dist' }))
 app.get('*', serveStatic({ path: './dist/index.html' }))
