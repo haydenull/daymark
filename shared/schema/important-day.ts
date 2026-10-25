@@ -26,7 +26,6 @@ export const lunarBirthdayInputSchema = z
 export const festivalInputSchema = z
   .object({
     type: z.literal('festival').openapi({ description: '节日' }),
-    title: titleSchema,
     festivalCode: festivalCodeSchema.openapi({ example: 'spring_festival', description: '节日代码' }),
   })
   .openapi('FestivalInput')

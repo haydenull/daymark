@@ -8,6 +8,7 @@ import { festivalDefinitions, isFestivalCode } from '@/shared/important-day/fest
 // 农历从“今天”所在的农历年开始找，避免公历年初仍属于上一农历年时算错。
 // 闰月生日只在该年确有对应闰月时用闰月，否则用普通同月，一年只出现一次。
 // 普通月生日不会落到闰月。三十在小月回退到廿九，但填写了出生年时，该年的原始日期必须真实存在，不能回退。
+// 闰月鞋只落在该年闰月的初十；没有闰月的年份跳过，不回退到普通月。
 
 const BEIJING_OFFSET_MS = 8 * 60 * 60 * 1000
 
@@ -180,7 +181,21 @@ function nextFestival(code: FestivalCode, today: SolarDay): SolarDay {
       return nextLunar(schedule.month, schedule.day, false, today)
     case 'nth_weekday':
       return nextSolar(today, (year) => nthWeekday(year, schedule.month, schedule.weekday, schedule.nth))
+    case 'leap_month_day':
+      return nextLeapMonthDay(today, schedule.day)
   }
+}
+
+function nextLeapMonthDay(today: SolarDay, day: number): SolarDay {
+  const startYear = today.getLunarDay().getYear()
+  // 闰月间隔最长约三年。nextWithin 只搜到 startYear+2，会漏掉本年闰月初十刚过、下一闰月在三年后的情况。
+  for (let year = startYear; year < startYear + 8; year += 1) {
+    const leapMonth = LunarYear.fromYear(year).getLeapMonth()
+    if (leapMonth === 0) continue
+    const occurrence = LunarDay.fromYmd(year, -leapMonth, day).getSolarDay()
+    if (!occurrence.isBefore(today)) return occurrence
+  }
+  throw new Error('无法计算下一次日期')
 }
 
 function nextLunar(month: number, day: number, isLeapMonth: boolean, today: SolarDay): SolarDay {

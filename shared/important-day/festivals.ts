@@ -6,6 +6,7 @@ export const festivalCodes = [
   'mid_autumn',
   'mothers_day',
   'fathers_day',
+  'leap_month_shoes',
 ] as const
 
 export type FestivalCode = (typeof festivalCodes)[number]
@@ -19,11 +20,12 @@ type NthWeekdaySchedule = {
   readonly weekday: 0
   readonly nth: number
 }
+type LeapMonthDaySchedule = { readonly kind: 'leap_month_day'; readonly day: number }
 
 type FestivalBody = {
   readonly name: string
   readonly ruleLabel: string
-  readonly schedule: SolarSchedule | LunarSchedule | NthWeekdaySchedule
+  readonly schedule: SolarSchedule | LunarSchedule | NthWeekdaySchedule | LeapMonthDaySchedule
 }
 
 // 节日规则由应用定义。tyme4ts 的节日索引不含情人节、母亲节和父亲节。
@@ -62,6 +64,11 @@ export const festivalDefinitions = {
     name: '父亲节',
     ruleLabel: '公历每年6月第三个星期日',
     schedule: { kind: 'nth_weekday', month: 6, weekday: 0, nth: 3 },
+  },
+  leap_month_shoes: {
+    name: '闰月鞋',
+    ruleLabel: '农历闰月初十，无闰月年份跳过',
+    schedule: { kind: 'leap_month_day', day: 10 },
   },
 } as const satisfies Record<FestivalCode, FestivalBody>
 

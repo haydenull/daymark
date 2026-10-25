@@ -165,17 +165,19 @@ function ImportantDayEditor({ userId }: { userId: string }) {
                     下次公历 {item.nextDate}，{item.daysRemaining === 0 ? '今天' : `剩余 ${item.daysRemaining} 天`}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  className="text-sm text-zinc-500"
-                  onClick={() => {
-                    setDraft(draftFromItem(item))
-                    setEditingId(item.id)
-                    save.reset()
-                  }}
-                >
-                  编辑
-                </button>
+                {item.type === 'lunar_birthday' ? (
+                  <button
+                    type="button"
+                    className="text-sm text-zinc-500"
+                    onClick={() => {
+                      setDraft(draftFromItem(item))
+                      setEditingId(item.id)
+                      save.reset()
+                    }}
+                  >
+                    编辑
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   className="text-sm text-zinc-500 hover:text-red-600 disabled:opacity-50"

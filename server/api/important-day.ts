@@ -9,7 +9,7 @@ import type { ImportantDayRule } from '@/server/important-day/calendar'
 import { assertRule, describeRule, ImportantDayRuleError, projectNext } from '@/server/important-day/calendar'
 import type { AuthUser } from '@/server/middleware/require-auth'
 import { currentUser, requireAuth } from '@/server/middleware/require-auth'
-import { isFestivalCode, listFestivalOptions } from '@/shared/important-day/festivals'
+import { festivalDefinitions, isFestivalCode, listFestivalOptions } from '@/shared/important-day/festivals'
 import { errorSchema } from '@/shared/schema/common'
 import type { ImportantDayInput, ImportantDayResponse } from '@/shared/schema/important-day'
 import { festivalOptionSchema, importantDayInputSchema, importantDaySchema } from '@/shared/schema/important-day'
@@ -68,7 +68,7 @@ function storedValues(userId: string, input: ImportantDayInput) {
   if (input.type === 'festival') {
     return {
       userId,
-      title: input.title,
+      title: festivalDefinitions[input.festivalCode].name,
       type: input.type,
       birthYear: null,
       lunarMonth: null,
@@ -120,15 +120,24 @@ function assertKnownRule(input: ImportantDayInput, now: Date) {
   }
 }
 
-function assertFestivalAvailable(userId: string, input: ImportantDayInput, excludeId?: number) {
+function assertFestivalAvailable(userId: string, input: ImportantDayInput) {
   if (input.type !== 'festival') return
   const existing = db
     .select({ id: importantDays.id })
     .from(importantDays)
     .where(and(eq(importantDays.userId, userId), eq(importantDays.festivalCode, input.festivalCode)))
     .get()
-  if (existing && existing.id !== excludeId) {
+  if (existing) {
     throw new HTTPException(409, { message: '该节日已存在' })
+  }
+}
+
+function assertUpdatableBirthday(existing: ImportantDay, input: ImportantDayInput) {
+  if (existing.type === 'festival') {
+    throw new HTTPException(400, { message: '节日不可修改' })
+  }
+  if (input.type !== existing.type) {
+    throw new HTTPException(400, { message: '类型不可切换' })
   }
 }
 
@@ -208,7 +217,7 @@ export const importantDay = importantDayRoutes
       summary: '获取可添加的节日',
       responses: {
         200: {
-          description: '返回七个每年重复的节日',
+          description: '返回可添加的节日选项',
           content: {
             'application/json': {
               schema: z.array(festivalOptionSchema),
@@ -290,25 +299,22 @@ export const importantDay = importantDayRoutes
         400: errorContent('请求参数错误'),
         401: errorContent('未登录'),
         404: errorContent('重要日子不存在'),
-        409: errorContent('该节日已存在'),
       },
     }),
     (c) => {
       const user = currentUser(c)
       const { id } = c.req.valid('param')
       const input = c.req.valid('json')
-      ownedDay(user.id, id)
+      const existing = ownedDay(user.id, id)
+      assertUpdatableBirthday(existing, input)
       const now = new Date()
       assertKnownRule(input, now)
-      assertFestivalAvailable(user.id, input, id)
-      const updated = writeRow(() =>
-        db
-          .update(importantDays)
-          .set({ ...storedValues(user.id, input), updatedAt: now })
-          .where(and(eq(importantDays.id, id), eq(importantDays.userId, user.id)))
-          .returning()
-          .get(),
-      )
+      const updated = db
+        .update(importantDays)
+        .set({ ...storedValues(user.id, input), updatedAt: now })
+        .where(and(eq(importantDays.id, id), eq(importantDays.userId, user.id)))
+        .returning()
+        .get()
       return c.json(toResponse(updated, now), 200)
     },
   )

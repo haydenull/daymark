@@ -19,7 +19,6 @@ export type Draft =
     }
   | {
       type: 'festival'
-      title: string
       festivalCode: string
     }
 
@@ -33,13 +32,6 @@ export const emptyDraft: Draft = {
 }
 
 export function draftFromItem(item: ImportantDayResponse): Draft {
-  if (item.type === 'festival') {
-    return {
-      type: 'festival',
-      title: item.title,
-      festivalCode: item.festivalCode ?? '',
-    }
-  }
   return {
     type: 'lunar_birthday',
     title: item.title,
@@ -74,13 +66,13 @@ function parseBirthYear(value: string): number | null | 'invalid' {
 }
 
 function validate(draft: Draft, festivals: FestivalOption[]): string | null {
-  const title = draft.title.trim()
-  if (!title) return '请填写名称'
-  if (title.length > 50) return '名称不能超过 50 个字'
   if (draft.type === 'festival') {
     if (!festivals.some((item) => item.code === draft.festivalCode)) return '请选择节日'
     return null
   }
+  const title = draft.title.trim()
+  if (!title) return '请填写名称'
+  if (title.length > 50) return '名称不能超过 50 个字'
   const month = Number(draft.lunarMonth)
   const day = Number(draft.lunarDay)
   if (!Number.isInteger(month) || month < 1 || month > 12) return '请选择农历月'
@@ -90,16 +82,15 @@ function validate(draft: Draft, festivals: FestivalOption[]): string | null {
 }
 
 function toInput(draft: Draft): ImportantDayInput {
-  const title = draft.title.trim()
   if (draft.type === 'festival') {
     if (!isFestivalCode(draft.festivalCode)) throw new Error('请选择节日')
-    return { type: 'festival', title, festivalCode: draft.festivalCode }
+    return { type: 'festival', festivalCode: draft.festivalCode }
   }
   const birthYear = parseBirthYear(draft.birthYear)
   if (birthYear === 'invalid') throw new Error('农历出生年份须为 1 到 9999 的整数，或留空')
   return {
     type: 'lunar_birthday',
-    title,
+    title: draft.title.trim(),
     birthYear,
     lunarMonth: Number(draft.lunarMonth),
     lunarDay: Number(draft.lunarDay),
@@ -130,31 +121,12 @@ export function ImportantDayForm({
   }
 
   function handleType(type: Draft['type']) {
-    if (type === draft.type) return
+    if (editing || type === draft.type) return
     if (type === 'lunar_birthday') {
-      change({
-        type,
-        title: draft.title,
-        lunarMonth: '1',
-        lunarDay: '1',
-        isLeapMonth: false,
-        birthYear: '',
-      })
+      change(emptyDraft)
       return
     }
-    change({ type, title: draft.title, festivalCode: '' })
-  }
-
-  function handleFestival(code: string) {
-    if (draft.type !== 'festival') return
-    const selected = festivals.find((item) => item.code === code)
-    const previous = festivals.find((item) => item.code === draft.festivalCode)
-    const titleWasDefault = draft.title.trim() === '' || draft.title === previous?.name
-    change({
-      type: 'festival',
-      festivalCode: code,
-      title: titleWasDefault && selected ? selected.name : draft.title,
-    })
+    change({ type, festivalCode: '' })
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -171,6 +143,7 @@ export function ImportantDayForm({
         类型
         <select
           value={draft.type}
+          disabled={editing}
           onChange={(event) => handleType(event.target.value as Draft['type'])}
           className={inputClass}
         >
@@ -178,17 +151,17 @@ export function ImportantDayForm({
           <option value="festival">节日</option>
         </select>
       </label>
-      <label className="block text-sm">
-        名称
-        <input
-          value={draft.title}
-          onChange={(event) => change({ ...draft, title: event.target.value })}
-          aria-label="名称"
-          className={inputClass}
-        />
-      </label>
       {draft.type === 'lunar_birthday' ? (
         <>
+          <label className="block text-sm">
+            名称
+            <input
+              value={draft.title}
+              onChange={(event) => change({ ...draft, title: event.target.value })}
+              aria-label="名称"
+              className={inputClass}
+            />
+          </label>
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block text-sm">
               农历月
@@ -247,7 +220,7 @@ export function ImportantDayForm({
             节日
             <select
               value={draft.festivalCode}
-              onChange={(event) => handleFestival(event.target.value)}
+              onChange={(event) => change({ type: 'festival', festivalCode: event.target.value })}
               disabled={festivalsPending || festivals.length === 0}
               className={inputClass}
             >

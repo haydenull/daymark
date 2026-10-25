@@ -1,168 +1,27 @@
-import type { APIRequestContext, Locator, Page, PlaywrightWorkerArgs, Route } from '@playwright/test'
+import type { Page, Route } from '@playwright/test'
 import { expect, test } from '@playwright/test'
 
-const origin = 'http://localhost:3000'
+import {
+  createGate,
+  expectAnonymous,
+  expectSignedIn,
+  fillLogin,
+  isSignInPost,
+  login,
+  loginButton,
+  openLogin,
+  origin,
+  readMe,
+  registerAccount,
+  reserveAuthAttempt,
+  responseBody,
+  signOut,
+  submitAndWaitForSignIn,
+  testPassword,
+} from './helpers/auth'
+import { setServerClock } from './helpers/clock'
+
 const signInPath = '**/api/auth/sign-in/email'
-const testPassword = 'daymark-e2e-password'
-
-// production 下 better-auth 对 /sign-in 与 /sign-up 分路径计数：10 秒最多 3 次。
-// 窗口从最近一次放行的请求起算，不是按最早一次请求滑动。429 不能当成凭据错误。
-const authWindowMs = 10_000
-const authMaxPerWindow = 3
-const authBuckets: Record<'sign-in' | 'sign-up', { count: number; lastAt: number }> = {
-  'sign-in': { count: 0, lastAt: 0 },
-  'sign-up': { count: 0, lastAt: 0 },
-}
-
-type Account = {
-  email: string
-  name: string
-  password: string
-}
-
-type ResponseBody = {
-  status: number
-  body: unknown
-}
-
-function responseBody(status: number, text: string): ResponseBody {
-  try {
-    return { status, body: JSON.parse(text) as unknown }
-  } catch {
-    return { status, body: text }
-  }
-}
-
-function createGate(): { wait: () => Promise<void>; release: () => void } {
-  let resolveGate = (): void => {}
-  let released = false
-  const opened = new Promise<void>((resolve) => {
-    resolveGate = resolve
-  })
-
-  return {
-    wait: () => opened,
-    release: () => {
-      if (released) return
-      released = true
-      resolveGate()
-    },
-  }
-}
-
-async function reserveAuthAttempt(kind: 'sign-in' | 'sign-up'): Promise<void> {
-  const bucket = authBuckets[kind]
-  for (;;) {
-    const now = Date.now()
-    const elapsed = now - bucket.lastAt
-    if (bucket.count >= authMaxPerWindow && elapsed < authWindowMs) {
-      await new Promise((resolve) => setTimeout(resolve, authWindowMs - elapsed + 500))
-      continue
-    }
-    bucket.count = bucket.count === 0 || elapsed >= authWindowMs ? 1 : bucket.count + 1
-    bucket.lastAt = now
-    return
-  }
-}
-
-async function registerAccount(playwright: PlaywrightWorkerArgs['playwright']): Promise<Account> {
-  const id = crypto.randomUUID()
-  const account: Account = {
-    email: `e2e-${id}@example.com`,
-    name: `n-${id.slice(0, 8)}`,
-    password: testPassword,
-  }
-
-  await reserveAuthAttempt('sign-up')
-  const api = await playwright.request.newContext({
-    baseURL: origin,
-    extraHTTPHeaders: { Origin: origin },
-  })
-  try {
-    const response = await api.post('/api/auth/sign-up/email', {
-      data: {
-        name: account.name,
-        email: account.email,
-        password: account.password,
-      },
-    })
-    const body = await response.text()
-    if (response.status() === 429) {
-      throw new Error(`注册被生产限流（429），不是注册业务失败：${body}`)
-    }
-    if (!response.ok()) {
-      throw new Error(`注册失败：${response.status()} ${body}`)
-    }
-    return account
-  } finally {
-    await api.dispose()
-  }
-}
-
-async function readMe(request: APIRequestContext): Promise<ResponseBody> {
-  const response = await request.get('/api/me')
-  return responseBody(response.status(), await response.text())
-}
-
-function loginButton(page: Page): Locator {
-  return page.getByRole('main').getByRole('button', { name: '登录', exact: true })
-}
-
-async function expectAnonymous(page: Page): Promise<void> {
-  const nav = page.getByRole('navigation')
-  await expect(nav.getByRole('link', { name: '登录', exact: true })).toBeVisible()
-  await expect(nav.getByRole('link', { name: '注册', exact: true })).toBeVisible()
-  await expect(nav.getByRole('button', { name: '退出', exact: true })).toHaveCount(0)
-  const me = await readMe(page.request)
-  expect(me.status, JSON.stringify(me.body)).toBe(401)
-}
-
-async function expectCurrentUser(request: APIRequestContext, account: Account): Promise<void> {
-  const me = await readMe(request)
-  expect(me.status, JSON.stringify(me.body)).toBe(200)
-  expect(me.body).toEqual({
-    id: expect.any(String),
-    email: account.email,
-    name: account.name,
-  })
-}
-
-async function expectSignedIn(page: Page, account: Account): Promise<void> {
-  await expect(page).toHaveURL(`${origin}/`)
-  await expect(page.getByRole('heading', { name: 'Bun Fullstack Template' })).toBeVisible()
-  await expect(page.getByRole('navigation').getByText(account.name, { exact: true })).toBeVisible()
-  await expectCurrentUser(page.request, account)
-}
-
-async function openLogin(page: Page): Promise<void> {
-  await page.goto('/login')
-  await expectAnonymous(page)
-}
-
-async function fillLogin(page: Page, email: string, password: string): Promise<void> {
-  await page.getByRole('main').getByLabel('邮箱').fill(email)
-  await page.getByRole('main').getByLabel('密码').fill(password)
-}
-
-function isSignInPost(response: { url: () => string; request: () => { method: () => string } }): boolean {
-  return response.url().includes('/api/auth/sign-in/email') && response.request().method() === 'POST'
-}
-
-async function submitAndWaitForSignIn(page: Page): Promise<ResponseBody> {
-  await reserveAuthAttempt('sign-in')
-  const responsePromise = page.waitForResponse(isSignInPost)
-  await loginButton(page).click()
-  const response = await responsePromise
-  return responseBody(response.status(), await response.text())
-}
-
-async function login(page: Page, account: Account, email = account.email): Promise<void> {
-  await fillLogin(page, email, account.password)
-  const outcome = await submitAndWaitForSignIn(page)
-  expect(outcome.status, JSON.stringify(outcome.body)).not.toBe(429)
-  expect(outcome.status, JSON.stringify(outcome.body)).toBe(200)
-  await expectSignedIn(page, account)
-}
 
 async function rejectLogin(page: Page, email: string, password: string): Promise<void> {
   await fillLogin(page, email, password)
@@ -178,6 +37,10 @@ async function rejectLogin(page: Page, email: string, password: string): Promise
 
 test.describe('登录', () => {
   test.describe.configure({ timeout: 60_000 })
+
+  test.beforeEach(async () => {
+    await setServerClock(null)
+  })
 
   test('正确账号登录后跳转首页，刷新仍保持会话', async ({ page, playwright }) => {
     const account = await registerAccount(playwright)
@@ -346,8 +209,7 @@ test.describe('登录', () => {
     const sessionCookie = savedCookies.find((cookie) => cookie.name.endsWith('session_token'))
     if (!sessionCookie?.value) throw new Error('登录后缺少 session_token cookie')
 
-    await page.getByRole('navigation').getByRole('button', { name: '退出', exact: true }).click()
-    await expectAnonymous(page)
+    await signOut(page)
     await page.reload()
     await expectAnonymous(page)
 

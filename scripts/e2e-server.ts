@@ -112,7 +112,12 @@ try {
   console.error(`E2E database: ${databaseFile}`)
   await runBun(['--no-env-file', 'run', 'db:migrate'], env)
 
-  const server = spawnBun(['--no-env-file', 'run', 'start'], env)
+  // 直接启动入口，保证 --preload 落在服务器进程里。`bun run start` 可能再起一层进程，时钟改写会丢失。
+  // 预加载只改重要日子的无参 new Date()，不改全局时间，因此登录限流和会话有效期仍走真实时钟。
+  const server = spawnBun(['--no-env-file', '--preload', './scripts/e2e-clock.ts', 'server/index.ts'], {
+    ...env,
+    E2E_CLOCK: '1',
+  })
   server.once('error', (error) => {
     console.error(error)
     shutdown(1)
