@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as ImportantDaysIndexRouteImport } from './routes/important-days/index'
 import { Route as TodoIndexRouteImport } from './routes/todo/index'
 
 const IndexRoute = IndexRouteImport.update({
@@ -29,6 +30,11 @@ const RegisterRoute = RegisterRouteImport.update({
   path: '/register',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ImportantDaysIndexRoute = ImportantDaysIndexRouteImport.update({
+  id: '/important-days/',
+  path: '/important-days/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TodoIndexRoute = TodoIndexRouteImport.update({
   id: '/todo/',
   path: '/todo/',
@@ -39,12 +45,14 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/important-days/': typeof ImportantDaysIndexRoute
   '/todo/': typeof TodoIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/important-days': typeof ImportantDaysIndexRoute
   '/todo': typeof TodoIndexRoute
 }
 export interface FileRoutesById {
@@ -52,20 +60,22 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/important-days/': typeof ImportantDaysIndexRoute
   '/todo/': typeof TodoIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/register' | '/todo/'
+  fullPaths: '/' | '/login' | '/register' | '/important-days/' | '/todo/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/register' | '/todo'
-  id: '__root__' | '/' | '/login' | '/register' | '/todo/'
+  to: '/' | '/login' | '/register' | '/important-days' | '/todo'
+  id: '__root__' | '/' | '/login' | '/register' | '/important-days/' | '/todo/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
+  ImportantDaysIndexRoute: typeof ImportantDaysIndexRoute
   TodoIndexRoute: typeof TodoIndexRoute
 }
 
@@ -92,6 +102,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/important-days/': {
+      id: '/important-days/'
+      path: '/important-days'
+      fullPath: '/important-days/'
+      preLoaderRoute: typeof ImportantDaysIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/todo/': {
       id: '/todo/'
       path: '/todo'
@@ -106,6 +123,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
+  ImportantDaysIndexRoute: ImportantDaysIndexRoute,
   TodoIndexRoute: TodoIndexRoute,
 }
 export const routeTree = rootRouteImport

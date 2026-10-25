@@ -36,6 +36,7 @@
     "ky": "^2.2.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
+    "tyme4ts": "^1.5.3",
     "zod": "^4.6.7"
   },
   "devDependencies": {
