@@ -31,6 +31,9 @@ bun run dev:server       # 仅启动 Hono
 bun run build:client     # 以 production 构建前端到 dist
 bun run start            # 启动生产服务器
 bun run test             # 运行 Vitest
+bun run test:e2e:install # 安装 Playwright Chromium
+bun run test:e2e         # 运行端到端冒烟测试
+bun run test:e2e:ui      # 打开 Playwright UI
 bun run typecheck        # tsc --noEmit
 bun run lint             # Biome lint
 bun run lint:fix         # 应用 Biome 的安全 lint 修复
@@ -44,6 +47,16 @@ bun run db:studio        # 打开 Drizzle Studio
 ```
 
 修改 `server/db/schema.ts` 后，先执行 `db:generate`，再执行 `db:migrate`。`drizzle-kit` 运行在 Node 上，不能直接打开 `bun:sqlite`，所以迁移由 `server/db/migrate.ts` 执行。认证表由 Better Auth CLI 生成到 `server/db/auth-schema.ts`，同样通过 `db:generate` 和 `db:migrate` 管理，不要手改 `drizzle/`。
+
+## 端到端测试
+
+冒烟测试使用 Playwright，测试运行器由 Bun 执行。目前只跑 Chromium，并且只有 1 个 worker。
+
+前置条件是 Bun，以及 Playwright 的 Chromium（`bun run test:e2e:install`）。请先执行 `bun run build:client`。`test:e2e` 不会再次构建，也不会复用已经开着的开发服务器。
+
+每次运行都会新建临时 SQLite，执行 `bun run db:migrate`，再让 `bun run start` 在 `http://localhost:3000` 提供构建后的页面和真实 API。`BETTER_AUTH_URL` 与浏览器同源。测试用的 `BETTER_AUTH_SECRET` 每次临时生成。进程退出时删除临时库和服务器，不会读写 `data/app.db`。端口 3000 已被占用时测试会失败，并留下原来的进程。
+
+失败时保留截图、trace 和 HTML 报告，报告目录是 `playwright-report/`。
 
 ## 账号
 
