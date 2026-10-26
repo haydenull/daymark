@@ -5,6 +5,7 @@ import { lazy, Suspense, useState } from 'react'
 import type { Theme } from '@/client/components/theme-provider'
 import { useTheme } from '@/client/components/theme-provider'
 import { authClient, authErrorMessage } from '@/client/libs/auth-client'
+import { useForgetApiTokensWhenUserChanges } from '@/client/routes/api-tokens/-query'
 import { useForgetImportantDaysWhenUserChanges } from '@/client/routes/important-days/-query'
 
 const TanStackRouterDevtools = import.meta.env.PROD
@@ -27,7 +28,9 @@ const nextTheme: Record<Theme, Theme> = {
 
 function AccountNav() {
   const session = authClient.useSession()
-  useForgetImportantDaysWhenUserChanges(session.data?.user.id ?? null)
+  const userId = session.data?.user.id ?? null
+  useForgetImportantDaysWhenUserChanges(userId)
+  useForgetApiTokensWhenUserChanges(userId)
   const [signingOut, setSigningOut] = useState(false)
   const [signOutError, setSignOutError] = useState<string | null>(null)
 
@@ -104,6 +107,9 @@ function RootComponent() {
           </Link>
           <Link to="/important-days" className="text-sm text-zinc-600 dark:text-zinc-300">
             重要日子
+          </Link>
+          <Link to="/api-tokens" className="text-sm text-zinc-600 dark:text-zinc-300">
+            API Token
           </Link>
           <a href="/api/doc" target="_blank" rel="noreferrer" className="text-sm text-zinc-600 dark:text-zinc-300">
             API 文档

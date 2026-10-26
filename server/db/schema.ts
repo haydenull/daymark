@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm'
-import { check, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core'
+import { check, index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core'
 
 import { user } from './auth-schema'
 
@@ -72,3 +72,26 @@ export const importantDays = sqliteTable(
 
 export type ImportantDay = typeof importantDays.$inferSelect
 export type NewImportantDay = typeof importantDays.$inferInsert
+
+export const apiTokens = sqliteTable(
+  'api_tokens',
+  {
+    id: text('id').primaryKey(),
+    userId: text('userId')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    tokenHash: text('tokenHash').notNull().unique(),
+    tokenPrefix: text('tokenPrefix').notNull(),
+    expiresAt: integer('expiresAt', { mode: 'timestamp' }),
+    revokedAt: integer('revokedAt', { mode: 'timestamp' }),
+    createdAt: integer('createdAt', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`)
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [index('api_tokens_userId_idx').on(table.userId)],
+)
+
+export type ApiToken = typeof apiTokens.$inferSelect
+export type NewApiToken = typeof apiTokens.$inferInsert

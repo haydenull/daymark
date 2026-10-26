@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as ApiTokensIndexRouteImport } from './routes/api-tokens/index'
 import { Route as ImportantDaysIndexRouteImport } from './routes/important-days/index'
 import { Route as TodoIndexRouteImport } from './routes/todo/index'
 
@@ -30,6 +31,11 @@ const RegisterRoute = RegisterRouteImport.update({
   path: '/register',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiTokensIndexRoute = ApiTokensIndexRouteImport.update({
+  id: '/api-tokens/',
+  path: '/api-tokens/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ImportantDaysIndexRoute = ImportantDaysIndexRouteImport.update({
   id: '/important-days/',
   path: '/important-days/',
@@ -45,6 +51,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/api-tokens/': typeof ApiTokensIndexRoute
   '/important-days/': typeof ImportantDaysIndexRoute
   '/todo/': typeof TodoIndexRoute
 }
@@ -52,6 +59,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/api-tokens': typeof ApiTokensIndexRoute
   '/important-days': typeof ImportantDaysIndexRoute
   '/todo': typeof TodoIndexRoute
 }
@@ -60,21 +68,36 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/api-tokens/': typeof ApiTokensIndexRoute
   '/important-days/': typeof ImportantDaysIndexRoute
   '/todo/': typeof TodoIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/register' | '/important-days/' | '/todo/'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/register'
+    | '/api-tokens/'
+    | '/important-days/'
+    | '/todo/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/register' | '/important-days' | '/todo'
-  id: '__root__' | '/' | '/login' | '/register' | '/important-days/' | '/todo/'
+  to: '/' | '/login' | '/register' | '/api-tokens' | '/important-days' | '/todo'
+  id:
+    | '__root__'
+    | '/'
+    | '/login'
+    | '/register'
+    | '/api-tokens/'
+    | '/important-days/'
+    | '/todo/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
+  ApiTokensIndexRoute: typeof ApiTokensIndexRoute
   ImportantDaysIndexRoute: typeof ImportantDaysIndexRoute
   TodoIndexRoute: typeof TodoIndexRoute
 }
@@ -102,6 +125,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api-tokens/': {
+      id: '/api-tokens/'
+      path: '/api-tokens'
+      fullPath: '/api-tokens/'
+      preLoaderRoute: typeof ApiTokensIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/important-days/': {
       id: '/important-days/'
       path: '/important-days'
@@ -123,6 +153,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
+  ApiTokensIndexRoute: ApiTokensIndexRoute,
   ImportantDaysIndexRoute: ImportantDaysIndexRoute,
   TodoIndexRoute: TodoIndexRoute,
 }

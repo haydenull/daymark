@@ -7,6 +7,7 @@ import { logger } from 'hono/logger'
 import { importantDay } from './api/important-day'
 import { me } from './api/me'
 import { todo } from './api/todo'
+import { token } from './api/token'
 import { auth } from './auth'
 
 const app = new OpenAPIHono()
@@ -26,6 +27,21 @@ app.get('/api/health', (c) => c.json({ ok: true }))
 app.route('/', todo)
 app.route('/', me)
 app.route('/', importantDay)
+app.route('/', token)
+
+app.openAPIRegistry.registerComponent('securitySchemes', 'Bearer', {
+  type: 'http',
+  scheme: 'bearer',
+  bearerFormat: 'API Token',
+  description:
+    '个人 API Token。示例：Bearer dm_exampleOnlyNotARealToken。创建后完整值只显示一次。只要请求带 Authorization，就只验证 Bearer，失败返回 401，不会回退 Cookie。',
+})
+app.openAPIRegistry.registerComponent('securitySchemes', 'CookieAuth', {
+  type: 'apiKey',
+  in: 'cookie',
+  name: 'better-auth.session_token',
+  description: '网页登录会话。Token 管理只接受该方式，不接受 API Token。',
+})
 
 app.doc('/api/openapi.json', {
   openapi: '3.0.0',

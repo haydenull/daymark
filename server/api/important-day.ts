@@ -7,8 +7,8 @@ import type { ImportantDay } from '@/server/db/schema'
 import { importantDays } from '@/server/db/schema'
 import type { ImportantDayRule } from '@/server/important-day/calendar'
 import { assertRule, describeRule, ImportantDayRuleError, projectNext } from '@/server/important-day/calendar'
-import type { AuthUser } from '@/server/middleware/require-auth'
-import { currentUser, requireAuth } from '@/server/middleware/require-auth'
+import type { AuthEnv } from '@/server/middleware/require-auth'
+import { cookieOrBearerSecurity, currentUser, requireAuth } from '@/server/middleware/require-auth'
 import { festivalDefinitions, isFestivalCode, listFestivalOptions } from '@/shared/important-day/festivals'
 import { errorSchema } from '@/shared/schema/common'
 import type { ImportantDayInput, ImportantDayResponse } from '@/shared/schema/important-day'
@@ -170,7 +170,7 @@ function ownedDay(userId: string, id: number): ImportantDay {
   return row
 }
 
-const importantDayRoutes = new OpenAPIHono<{ Variables: { user: AuthUser } }>({
+const importantDayRoutes = new OpenAPIHono<AuthEnv>({
   defaultHook: (result, c) => {
     if (!result.success) {
       return c.json({ code: 400, message: '请求参数错误' }, 400)
@@ -187,6 +187,7 @@ export const importantDay = importantDayRoutes
       path: '/',
       tags: ['ImportantDay'],
       summary: '获取当前用户的重要日子',
+      security: cookieOrBearerSecurity,
       responses: {
         200: {
           description: '按剩余天数从近到远返回，今天的剩余天数为 0',
@@ -215,6 +216,7 @@ export const importantDay = importantDayRoutes
       path: '/festivals',
       tags: ['ImportantDay'],
       summary: '获取可添加的节日',
+      security: cookieOrBearerSecurity,
       responses: {
         200: {
           description: '返回可添加的节日选项',
@@ -238,6 +240,7 @@ export const importantDay = importantDayRoutes
       path: '/',
       tags: ['ImportantDay'],
       summary: '新建重要日子',
+      security: cookieOrBearerSecurity,
       request: {
         body: {
           content: {
@@ -277,6 +280,7 @@ export const importantDay = importantDayRoutes
       path: '/:id',
       tags: ['ImportantDay'],
       summary: '更新重要日子',
+      security: cookieOrBearerSecurity,
       request: {
         params: importantDayIdParamSchema,
         body: {
@@ -324,6 +328,7 @@ export const importantDay = importantDayRoutes
       path: '/:id',
       tags: ['ImportantDay'],
       summary: '删除重要日子',
+      security: cookieOrBearerSecurity,
       request: {
         params: importantDayIdParamSchema,
       },

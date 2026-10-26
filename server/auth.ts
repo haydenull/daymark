@@ -36,12 +36,12 @@ function readAuthURL(): string {
   return url.origin
 }
 
-const baseURL = readAuthURL()
+export const authBaseURL = readAuthURL()
 
 export const auth = betterAuth({
-  baseURL,
+  baseURL: authBaseURL,
   secret: readAuthSecret(),
-  trustedOrigins: [baseURL],
+  trustedOrigins: [authBaseURL],
   database: drizzleAdapter(db, {
     provider: 'sqlite',
     schema: authSchema,
