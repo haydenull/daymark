@@ -6,7 +6,7 @@ import { e2eClockOrigin, e2eClockPort } from '../e2e/clock-port'
 
 // 不替换全局 Date。better-auth 的会话有效期和登录限流都读真实时间，
 // 全局冻结会让 10 秒 3 次的限额窗口停住，或在日期回拨后把会话提前判过期。
-// 这里只改写重要日子日期计算里的无参 new Date()，而且只在 E2E 预加载时生效。
+// 仅在 E2E 预加载时改写重要日子和 Token 的业务时钟。
 const clockedNow = 'new Date(globalThis.__e2eImportantDayEpoch ?? Date.now())'
 const clockGlobal = globalThis as typeof globalThis & {
   __e2eImportantDayEpoch?: number | null
@@ -18,15 +18,20 @@ if (process.env.E2E_CLOCK === '1') {
   await plugin({
     name: 'e2e-important-day-clock',
     setup(build) {
-      build.onLoad({ filter: /\/server\/(?:api\/important-day|important-day\/calendar)\.ts$/ }, async (args) => {
-        const source = await Bun.file(args.path).text()
-        const contents = source.replaceAll('new Date()', clockedNow)
-        if (contents === source) {
-          throw new Error(`E2E 时钟没有改写 ${args.path} 里的 new Date()。`)
-        }
-        console.error(`E2E clock patched ${args.path}`)
-        return { contents, loader: 'ts' }
-      })
+      build.onLoad(
+        { filter: /\/server\/(?:api\/(?:important-day|token)|important-day\/calendar|api-token)\.ts$/ },
+        async (args) => {
+          const source = await Bun.file(args.path).text()
+          const contents = args.path.endsWith('/server/api-token.ts')
+            ? source.replaceAll('Date.now()', '(globalThis.__e2eImportantDayEpoch ?? Date.now())')
+            : source.replaceAll('new Date()', clockedNow)
+          if (contents === source) {
+            throw new Error(`E2E 时钟没有改写 ${args.path} 里的业务时钟。`)
+          }
+          console.error(`E2E clock patched ${args.path}`)
+          return { contents, loader: 'ts' }
+        },
+      )
     },
   })
 
