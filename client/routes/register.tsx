@@ -1,8 +1,10 @@
+import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import type { FormEvent } from 'react'
+import type { FormEvent, ReactNode } from 'react'
 import { useState } from 'react'
 
 import { authClient, authErrorMessage } from '@/client/libs/auth-client'
+import { publicConfigQueryOptions } from '@/client/libs/public-config'
 
 export const Route = createFileRoute('/register')({
   component: RegisterPage,
@@ -25,7 +27,11 @@ function validate(name: string, email: string, password: string): FieldErrors {
   return errors
 }
 
-function RegisterPage() {
+function PageMain({ children }: { children: ReactNode }) {
+  return <main className="mx-auto max-w-md px-6 py-16">{children}</main>
+}
+
+function RegisterForm() {
   const navigate = useNavigate()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -59,51 +65,90 @@ function RegisterPage() {
   }
 
   return (
-    <main className="mx-auto max-w-md px-6 py-16">
-      <h1 className="text-3xl font-semibold tracking-tight">注册</h1>
-      <form onSubmit={handleSubmit} noValidate className="mt-8 space-y-4">
-        <label className="block text-sm">
-          昵称
-          <input
-            type="text"
-            autoComplete="nickname"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            className={inputClass}
-          />
-        </label>
-        {fieldErrors.name ? <p className="text-sm text-red-600">{fieldErrors.name}</p> : null}
-        <label className="block text-sm">
-          邮箱
-          <input
-            type="email"
-            autoComplete="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            className={inputClass}
-          />
-        </label>
-        {fieldErrors.email ? <p className="text-sm text-red-600">{fieldErrors.email}</p> : null}
-        <label className="block text-sm">
-          密码
-          <input
-            type="password"
-            autoComplete="new-password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            className={inputClass}
-          />
-        </label>
-        {fieldErrors.password ? <p className="text-sm text-red-600">{fieldErrors.password}</p> : null}
-        {formError ? <p className="text-sm text-red-600">{formError}</p> : null}
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-md bg-zinc-900 px-4 py-2 text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
-        >
-          {pending ? '注册中...' : '注册'}
+    <form onSubmit={handleSubmit} noValidate className="mt-8 space-y-4">
+      <label className="block text-sm">
+        昵称
+        <input
+          type="text"
+          autoComplete="nickname"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          className={inputClass}
+        />
+      </label>
+      {fieldErrors.name ? <p className="text-sm text-red-600">{fieldErrors.name}</p> : null}
+      <label className="block text-sm">
+        邮箱
+        <input
+          type="email"
+          autoComplete="email"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          className={inputClass}
+        />
+      </label>
+      {fieldErrors.email ? <p className="text-sm text-red-600">{fieldErrors.email}</p> : null}
+      <label className="block text-sm">
+        密码
+        <input
+          type="password"
+          autoComplete="new-password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          className={inputClass}
+        />
+      </label>
+      {fieldErrors.password ? <p className="text-sm text-red-600">{fieldErrors.password}</p> : null}
+      {formError ? <p className="text-sm text-red-600">{formError}</p> : null}
+      <button
+        type="submit"
+        disabled={pending}
+        className="rounded-md bg-zinc-900 px-4 py-2 text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+      >
+        {pending ? '注册中...' : '注册'}
+      </button>
+    </form>
+  )
+}
+
+function RegisterPage() {
+  const publicConfig = useQuery(publicConfigQueryOptions())
+
+  if (publicConfig.isPending) {
+    return (
+      <PageMain>
+        <h1 className="text-3xl font-semibold tracking-tight">注册</h1>
+        <p className="mt-8 text-zinc-600 dark:text-zinc-300" aria-live="polite">
+          配置加载中
+        </p>
+      </PageMain>
+    )
+  }
+
+  if (publicConfig.isError) {
+    return (
+      <PageMain>
+        <h1 className="text-3xl font-semibold tracking-tight">注册</h1>
+        <button type="button" className="mt-8 text-sm text-red-600" onClick={() => void publicConfig.refetch()}>
+          配置加载失败，重试
         </button>
-      </form>
-    </main>
+      </PageMain>
+    )
+  }
+
+  if (!publicConfig.data.registrationOpen) {
+    return (
+      <PageMain>
+        <h1 className="text-3xl font-semibold tracking-tight">注册</h1>
+        <p className="mt-8 text-zinc-600 dark:text-zinc-300">注册已关闭</p>
+      </PageMain>
+    )
+  }
+
+  return (
+    <PageMain>
+      <h1 className="text-3xl font-semibold tracking-tight">注册</h1>
+      <RegisterForm />
+    </PageMain>
   )
 }

@@ -64,6 +64,8 @@ bun run db:studio        # 打开 Drizzle Studio
 
 `BETTER_AUTH_URL` 是浏览器访问的站点来源。本地开发保持 `http://localhost:5173`；部署到生产环境时改为实际的 HTTPS 域名。`BETTER_AUTH_SECRET` 只在服务端使用，用 `openssl rand -base64 32` 生成，不要提交真实密钥。执行迁移不需要这两个变量。
 
+`DISABLE_REGISTRATION` 只接受 `true` 或 `false`，默认 `false`。设为 `true` 后禁止新用户注册，已有账号仍可登录。修改后重启后端即可，不必重建前端。
+
 Todo 示例保持公开，不绑定账号。
 
 ## 目录结构

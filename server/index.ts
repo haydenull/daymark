@@ -4,6 +4,7 @@ import { serveStatic } from 'hono/bun'
 import { HTTPException } from 'hono/http-exception'
 import { logger } from 'hono/logger'
 
+import { config } from './api/config'
 import { importantDay } from './api/important-day'
 import { me } from './api/me'
 import { todo } from './api/todo'
@@ -24,6 +25,7 @@ app.onError((err, c) => {
 
 app.get('/api/health', (c) => c.json({ ok: true }))
 
+app.route('/', config)
 app.route('/', todo)
 app.route('/', me)
 app.route('/', importantDay)

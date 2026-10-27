@@ -6,6 +6,7 @@ export const authClient = createAuthClient({
 })
 
 const messagesByCode: Record<string, string> = {
+  EMAIL_PASSWORD_SIGN_UP_DISABLED: '注册已关闭',
   INVALID_EMAIL: '邮箱格式不正确',
   INVALID_ORIGIN: '请求来源不被允许',
   INVALID_EMAIL_OR_PASSWORD: '邮箱或密码不正确',
@@ -17,6 +18,7 @@ const messagesByCode: Record<string, string> = {
 }
 
 const messagesByText: Record<string, string> = {
+  'Email and password sign up is not enabled': '注册已关闭',
   'Invalid email': '邮箱格式不正确',
   'Invalid email or password': '邮箱或密码不正确',
   'Invalid password': '密码不正确',

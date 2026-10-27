@@ -1,6 +1,7 @@
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 
+import { ENV } from '@/env'
 import { db } from '@/server/db'
 import * as authSchema from '@/server/db/auth-schema'
 
@@ -48,6 +49,7 @@ export const auth = betterAuth({
   }),
   emailAndPassword: {
     enabled: true,
+    disableSignUp: ENV.DISABLE_REGISTRATION,
     autoSignIn: true,
     requireEmailVerification: false,
   },

@@ -1,10 +1,12 @@
 import type { QueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { createRootRouteWithContext, Link, Outlet } from '@tanstack/react-router'
 import { lazy, Suspense, useState } from 'react'
 
 import type { Theme } from '@/client/components/theme-provider'
 import { useTheme } from '@/client/components/theme-provider'
 import { authClient, authErrorMessage } from '@/client/libs/auth-client'
+import { publicConfigQueryOptions } from '@/client/libs/public-config'
 import { useForgetApiTokensWhenUserChanges } from '@/client/routes/api-tokens/-query'
 import { useForgetImportantDaysWhenUserChanges } from '@/client/routes/important-days/-query'
 
@@ -28,6 +30,7 @@ const nextTheme: Record<Theme, Theme> = {
 
 function AccountNav() {
   const session = authClient.useSession()
+  const publicConfig = useQuery(publicConfigQueryOptions())
   const userId = session.data?.user.id ?? null
   useForgetImportantDaysWhenUserChanges(userId)
   useForgetApiTokensWhenUserChanges(userId)
@@ -85,9 +88,11 @@ function AccountNav() {
       <Link to="/login" className="text-sm text-zinc-600 dark:text-zinc-300">
         登录
       </Link>
-      <Link to="/register" className="text-sm text-zinc-600 dark:text-zinc-300">
-        注册
-      </Link>
+      {publicConfig.data?.registrationOpen ? (
+        <Link to="/register" className="text-sm text-zinc-600 dark:text-zinc-300">
+          注册
+        </Link>
+      ) : null}
     </div>
   )
 }
