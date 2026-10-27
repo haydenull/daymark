@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test'
 
 import type { CreatedApiTokenResponse } from '../shared/schema/api-token'
 import type { Account } from './helpers/auth'
-import { login, openLogin, origin, registerAccount, signOut } from './helpers/auth'
+import { appOrigin, login, openLogin, registerAccount, signOut } from './helpers/auth'
 import { setServerClock } from './helpers/clock'
 
 type Playwright = PlaywrightWorkerArgs['playwright']
@@ -78,7 +78,7 @@ async function withBearer(
   run: (api: APIRequestContext) => Promise<void>,
 ): Promise<void> {
   const api = await playwright.request.newContext({
-    baseURL: origin,
+    baseURL: appOrigin(),
     extraHTTPHeaders: { Authorization: `Bearer ${token}` },
   })
   try {
@@ -103,10 +103,10 @@ test.describe('API Token', () => {
 
       expect((await request.get('/api/token')).status()).toBe(401)
       expect(
-        (await request.post('/api/token', { data: { name: 'anonymous' }, headers: { Origin: origin } })).status(),
+        (await request.post('/api/token', { data: { name: 'anonymous' }, headers: { Origin: appOrigin() } })).status(),
       ).toBe(401)
       expect(
-        (await request.delete(`/api/token/${crypto.randomUUID()}`, { headers: { Origin: origin } })).status(),
+        (await request.delete(`/api/token/${crypto.randomUUID()}`, { headers: { Origin: appOrigin() } })).status(),
       ).toBe(401)
     })
   })
@@ -221,7 +221,7 @@ test.describe('API Token', () => {
       await setServerClock(Date.parse('2030-01-01T00:00:00Z'))
       const created = await page.request.post('/api/token', {
         data: { name: '到期脚本' },
-        headers: { Origin: origin },
+        headers: { Origin: appOrigin() },
       })
       expect(created.status()).toBe(200)
       const token: CreatedApiTokenResponse = await created.json()

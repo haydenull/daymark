@@ -1,30 +1,57 @@
 import { defineConfig, devices } from '@playwright/test'
 
-const origin = 'http://localhost:3000'
+const openOrigin = 'http://localhost:3000'
+const disabledOrigin = 'http://localhost:3001'
 
 export default defineConfig({
   testDir: 'e2e',
+  outputDir: 'test-results',
   workers: 1,
   retries: 0,
   forbidOnly: !!process.env.CI,
-  reporter: [['list'], ['html', { open: 'never' }]],
+  reporter: [['list'], ['html', { open: 'never', outputFolder: 'playwright-report' }]],
   use: {
-    baseURL: origin,
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',
   },
   projects: [
     {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      name: 'open',
+      testIgnore: 'registration-disabled.spec.ts',
+      outputDir: 'test-results/open',
+      use: { ...devices['Desktop Chrome'], baseURL: openOrigin },
+    },
+    {
+      name: 'disabled',
+      testMatch: 'registration-disabled.spec.ts',
+      outputDir: 'test-results/disabled',
+      use: { ...devices['Desktop Chrome'], baseURL: disabledOrigin },
     },
   ],
-  webServer: {
-    command: 'bun --no-env-file scripts/e2e-server.ts',
-    url: `${origin}/api/health`,
-    reuseExistingServer: false,
-    timeout: 60_000,
-    // 默认会 SIGKILL 整个进程组，启动脚本来不及删除临时库。
-    gracefulShutdown: { signal: 'SIGTERM', timeout: 5_000 },
-  },
+  webServer: [
+    {
+      name: 'open',
+      command: 'bun --no-env-file scripts/e2e-server.ts',
+      url: `${openOrigin}/api/health`,
+      reuseExistingServer: false,
+      timeout: 60_000,
+      gracefulShutdown: { signal: 'SIGTERM', timeout: 5_000 },
+      env: {
+        E2E_PORT: '3000',
+        E2E_DISABLE_REGISTRATION: 'false',
+      },
+    },
+    {
+      name: 'disabled',
+      command: 'bun --no-env-file scripts/e2e-server.ts',
+      url: `${disabledOrigin}/api/health`,
+      reuseExistingServer: false,
+      timeout: 60_000,
+      gracefulShutdown: { signal: 'SIGTERM', timeout: 5_000 },
+      env: {
+        E2E_PORT: '3001',
+        E2E_DISABLE_REGISTRATION: 'true',
+      },
+    },
+  ],
 })

@@ -2,10 +2,15 @@ import { closeSync, mkdirSync, openSync, readFileSync, renameSync, statSync, unl
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { APIRequestContext, Locator, Page, PlaywrightWorkerArgs } from '@playwright/test'
-import { expect } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 
-export const origin = 'http://localhost:3000'
 export const testPassword = 'daymark-e2e-password'
+
+export function appOrigin(): string {
+  const baseURL = test.info().project.use.baseURL
+  if (!baseURL) throw new Error('当前 Playwright project 未配置 baseURL')
+  return new URL(baseURL).origin
+}
 
 // production 下 better-auth 对 /sign-in 与 /sign-up 分路径计数：10 秒最多 3 次。
 // 窗口从最近一次放行的请求起算。计数放在临时文件里，同一台机器上的多个 worker 共用，
@@ -84,6 +89,7 @@ export async function registerAccount(playwright: PlaywrightWorkerArgs['playwrig
   }
 
   await reserveAuthAttempt('sign-up')
+  const origin = appOrigin()
   const api = await playwright.request.newContext({
     baseURL: origin,
     extraHTTPHeaders: { Origin: origin },
@@ -138,7 +144,7 @@ async function expectCurrentUser(request: APIRequestContext, account: Account): 
 }
 
 export async function expectSignedIn(page: Page, account: Account): Promise<void> {
-  await expect(page).toHaveURL(`${origin}/`)
+  await expect(page).toHaveURL(`${appOrigin()}/`)
   await expect(page.getByRole('heading', { name: 'Bun Fullstack Template' })).toBeVisible()
   await expect(page.getByRole('navigation').getByText(account.name, { exact: true })).toBeVisible()
   await expectCurrentUser(page.request, account)

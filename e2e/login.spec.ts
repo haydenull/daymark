@@ -2,6 +2,7 @@ import type { Page, Route } from '@playwright/test'
 import { expect, test } from '@playwright/test'
 
 import {
+  appOrigin,
   createGate,
   expectAnonymous,
   expectSignedIn,
@@ -10,7 +11,6 @@ import {
   login,
   loginButton,
   openLogin,
-  origin,
   readMe,
   registerAccount,
   reserveAuthAttempt,
@@ -29,7 +29,7 @@ async function rejectLogin(page: Page, email: string, password: string): Promise
   expect(outcome.status, JSON.stringify(outcome.body)).not.toBe(429)
   expect(outcome.status, JSON.stringify(outcome.body)).toBe(401)
   await expect(page.getByRole('main').getByText('邮箱或密码不正确', { exact: true })).toBeVisible()
-  await expect(page).toHaveURL(`${origin}/login`)
+  await expect(page).toHaveURL(`${appOrigin()}/login`)
   await expect(page.getByRole('heading', { name: '登录' })).toBeVisible()
   await expect(loginButton(page)).toBeEnabled()
   await expectAnonymous(page)
@@ -84,7 +84,7 @@ test.describe('登录', () => {
           await expect(page.getByRole('main').getByText(other.message, { exact: true })).toHaveCount(0)
         }
         await expect(loginButton(page)).toBeEnabled()
-        await expect(page).toHaveURL(`${origin}/login`)
+        await expect(page).toHaveURL(`${appOrigin()}/login`)
         expect(signInPosts).toBe(0)
       }
     } finally {
@@ -190,7 +190,7 @@ test.describe('登录', () => {
       await loginButton(page).click()
       await expect(page.getByRole('main').getByText('网络异常，请稍后重试', { exact: true })).toBeVisible()
       await expect(loginButton(page)).toBeEnabled()
-      await expect(page).toHaveURL(`${origin}/login`)
+      await expect(page).toHaveURL(`${appOrigin()}/login`)
       expect(aborted).toBe(1)
       await expectAnonymous(page)
     } finally {
@@ -214,7 +214,7 @@ test.describe('登录', () => {
     await expectAnonymous(page)
 
     const replay = await playwright.request.newContext({
-      baseURL: origin,
+      baseURL: appOrigin(),
       storageState: { cookies: savedCookies, origins: [] },
     })
     try {
