@@ -3,24 +3,6 @@ import { check, index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-o
 
 import { user } from './auth-schema'
 
-export const todos = sqliteTable('todos', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  title: text('title').notNull(),
-  completed: integer('completed', { mode: 'boolean' }).notNull().default(false),
-  createdAt: integer('createdAt', { mode: 'timestamp' })
-    .notNull()
-    .default(sql`(unixepoch())`)
-    .$defaultFn(() => new Date()),
-  updatedAt: integer('updatedAt', { mode: 'timestamp' })
-    .notNull()
-    .default(sql`(unixepoch())`)
-    .$defaultFn(() => new Date())
-    .$onUpdateFn(() => new Date()),
-})
-
-export type Todo = typeof todos.$inferSelect
-export type NewTodo = typeof todos.$inferInsert
-
 // festivalCode 为空表示农历生日。SQLite 的 UNIQUE 把 NULL 视为互不相同，
 // 因此同一用户可以保存多条生日，但不能重复保存同一个节日。
 export const importantDays = sqliteTable(

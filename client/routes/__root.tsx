@@ -107,9 +107,6 @@ function RootComponent() {
           <Link to="/" className="text-sm text-zinc-600 dark:text-zinc-300">
             Home
           </Link>
-          <Link to="/todo" className="text-sm text-zinc-600 dark:text-zinc-300">
-            Todo
-          </Link>
           <Link to="/important-days" className="text-sm text-zinc-600 dark:text-zinc-300">
             重要日子
           </Link>

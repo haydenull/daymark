@@ -7,7 +7,6 @@ import { logger } from 'hono/logger'
 import { config } from './api/config'
 import { importantDay } from './api/important-day'
 import { me } from './api/me'
-import { todo } from './api/todo'
 import { token } from './api/token'
 import { auth } from './auth'
 
@@ -26,7 +25,6 @@ app.onError((err, c) => {
 app.get('/api/health', (c) => c.json({ ok: true }))
 
 app.route('/', config)
-app.route('/', todo)
 app.route('/', me)
 app.route('/', importantDay)
 app.route('/', token)

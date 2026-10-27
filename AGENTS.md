@@ -46,13 +46,13 @@ bun run typecheck        # TypeScript 类型检查
 ### 核心模式：类型安全的 RPC 客户端
 
 ```typescript
-// 后端定义 (server/api/todo.ts)
-export const todo = new OpenAPIHono().basePath('/api/todo')
-export type TodoAPI = typeof todo
+// 后端定义 (server/api/important-day.ts)
+export const importantDay = new OpenAPIHono().basePath('/api/important-day')
+export type ImportantDayAPI = typeof importantDay
 
-// 前端调用 (client/routes/todo/-query.ts)
-const todoClient = hc<TodoAPI>(import.meta.env.BASE_URL, { fetch: request })
-const res = await todoClient.api.todo.$get()
+// 前端调用 (client/routes/important-days/-query.ts)
+const importantDayClient = hc<ImportantDayAPI>(import.meta.env.BASE_URL, { fetch: request })
+const res = await importantDayClient.api['important-day'].$get()
 ```
 
 ### 数据流

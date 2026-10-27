@@ -46,7 +46,7 @@ bun run db:migrate       # 用 Bun 执行迁移
 bun run db:studio        # 打开 Drizzle Studio
 ```
 
-修改 `server/db/schema.ts` 后，先执行 `db:generate`，再执行 `db:migrate`。`drizzle-kit` 运行在 Node 上，不能直接打开 `bun:sqlite`，所以迁移由 `server/db/migrate.ts` 执行。认证表由 Better Auth CLI 生成到 `server/db/auth-schema.ts`，同样通过 `db:generate` 和 `db:migrate` 管理，不要手改 `drizzle/`。
+修改 `server/db/schema.ts` 后，先执行 `db:generate`，再执行 `db:migrate`。`drizzle-kit` 运行在 Node 上，不能直接打开 `bun:sqlite`，所以迁移由 `server/db/migrate.ts` 执行。认证表由 Better Auth CLI 生成到 `server/db/auth-schema.ts`，同样通过 `db:generate` 和 `db:migrate` 管理，不要手改 `drizzle/`。删除 `todos` 表的迁移会清掉旧 Todo 数据。
 
 ## 端到端测试
 
@@ -65,8 +65,6 @@ bun run db:studio        # 打开 Drizzle Studio
 `BETTER_AUTH_URL` 是浏览器访问的站点来源。本地开发保持 `http://localhost:5173`；部署到生产环境时改为实际的 HTTPS 域名。`BETTER_AUTH_SECRET` 只在服务端使用，用 `openssl rand -base64 32` 生成，不要提交真实密钥。执行迁移不需要这两个变量。
 
 `DISABLE_REGISTRATION` 只接受 `true` 或 `false`，默认 `false`。设为 `true` 后禁止新用户注册，已有账号仍可登录。修改后重启后端即可，不必重建前端。
-
-Todo 示例保持公开，不绑定账号。
 
 ## 目录结构
 
@@ -92,7 +90,7 @@ Todo 示例保持公开，不绑定账号。
 2. 在 `server/api/` 创建 `OpenAPIHono` 路由，用 `createRoute` 声明参数和响应，再在 `server/index.ts` 里 `app.route()` 挂载。
 3. 在前端用 `hc<该路由的类型>()` 调用，并把请求放进 TanStack Query。
 
-Todo 示例对应 `shared/schema/todo.ts`、`server/api/todo.ts` 和 `client/routes/todo/-query.ts`。
+重要日子示例对应 `shared/schema/important-day.ts`、`server/api/important-day.ts` 和 `client/routes/important-days/-query.ts`。
 
 ## 关键约束
 

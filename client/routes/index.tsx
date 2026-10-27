@@ -12,10 +12,10 @@ function HomePage() {
         一个使用 Bun、Hono、Drizzle 和 React 的全栈 TypeScript 模板。前后端通过 Zod schema 与 Hono RPC 共享类型。
       </p>
       <Link
-        to="/todo"
+        to="/important-days"
         className="mt-8 inline-block rounded-md bg-zinc-900 px-4 py-2 text-white dark:bg-zinc-100 dark:text-zinc-900"
       >
-        打开 Todo 示例
+        打开重要日子
       </Link>
     </main>
   )
