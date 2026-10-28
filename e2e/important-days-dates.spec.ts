@@ -218,6 +218,19 @@ test.describe('重要日子日期', () => {
     await expectOccurrence(page, '闰日', ruleLabel, '2028-02-29', daysBetween('2027-03-01', '2028-02-29'))
   })
 
+  test('无起始年的2月29日在非闰年2月28日当天算这次，次日进入下一年', async ({ page, playwright }) => {
+    const ruleLabel = '公历每年2月29日，非闰年用2月28日'
+    await signInAt(page, playwright, '2025-02-28')
+    await chooseSolarAnniversary(page, { title: '闰日', month: '2', day: '29' })
+    await addAndSee(page, '闰日')
+    await expectOccurrence(page, '闰日', ruleLabel, '2025-02-28', 0)
+
+    await setServerClock(beijingEpoch('2025-03-01'))
+    await page.clock.setSystemTime(beijingEpoch('2025-03-01'))
+    await page.reload()
+    await expectOccurrence(page, '闰日', ruleLabel, '2026-02-28', daysBetween('2025-03-01', '2026-02-28'))
+  })
+
   test('北京时间越过午夜后页面自动刷新', async ({ page, playwright }) => {
     await signInAt(page, playwright, '2026-02-14', '23:00:00')
     await chooseFestival(page, 'valentines_day')

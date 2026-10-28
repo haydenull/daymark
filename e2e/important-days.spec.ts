@@ -2,7 +2,7 @@ import type { Page, PlaywrightWorkerArgs, Route } from '@playwright/test'
 import { expect, test } from '@playwright/test'
 
 import { login, openLogin, registerAccount, signOut } from './helpers/auth'
-import { setServerClock } from './helpers/clock'
+import { beijingEpoch, installBrowserClock, setServerClock } from './helpers/clock'
 import {
   addButton,
   chooseBirthday,
@@ -222,6 +222,10 @@ test.describe('重要日子', () => {
   })
 
   test.describe('公历纪念日', () => {
+    test.afterEach(async () => {
+      await setServerClock(null)
+    })
+
     test('新增、编辑并持久化', async ({ page, playwright }) => {
       await signIn(page, playwright)
       await chooseSolarAnniversary(page, { title: '领证纪念日', month: '5', day: '27', year: '2021' })
@@ -293,6 +297,178 @@ test.describe('重要日子', () => {
         '公历没有4月31日',
       )
       expect(await listImportantDays(page)).toEqual([])
+    })
+
+    test('无起始年新增并持久化', async ({ page, playwright }) => {
+      await signIn(page, playwright)
+      await chooseSolarAnniversary(page, { title: '入职日', month: '3', day: '8' })
+      await submitImportantDay(page)
+      await expect(dayItem(page, '入职日')).toContainText('公历每年3月8日')
+      await expect(dayItem(page, '入职日')).not.toContainText('起始年')
+      await expect(dayItem(page, '入职日')).toContainText(/下次公历 \d{4}-\d{2}-\d{2}，(今天|剩余 \d+ 天)/)
+      expect(await findDay(page, '入职日')).toMatchObject({
+        title: '入职日',
+        type: 'solar_anniversary',
+        birthYear: null,
+        lunarMonth: null,
+        lunarDay: null,
+        isLeapMonth: null,
+        festivalCode: null,
+        solarMonth: 3,
+        solarDay: 8,
+        anniversaryYear: null,
+      })
+
+      await page.reload()
+      await expect(dayItem(page, '入职日')).toContainText('公历每年3月8日')
+      await expect(dayItem(page, '入职日')).not.toContainText('起始年')
+      await expect(dayItem(page, '入职日')).toContainText(/下次公历 \d{4}-\d{2}-\d{2}，(今天|剩余 \d+ 天)/)
+      await dayItem(page, '入职日').getByRole('button', { name: '编辑', exact: true }).click()
+      await expect(page.getByLabel('类型')).toHaveValue('solar_anniversary')
+      await expect(page.getByLabel('名称')).toHaveValue('入职日')
+      await expect(page.getByLabel('公历月')).toHaveValue('3')
+      await expect(page.getByLabel('公历日')).toHaveValue('8')
+      await expect(page.getByLabel('起始年（选填）')).toHaveValue('')
+    })
+
+    test('编辑取消后保留原值', async ({ page, playwright }) => {
+      await signIn(page, playwright)
+      await chooseSolarAnniversary(page, { title: '领证纪念日', month: '5', day: '27', year: '2021' })
+      await submitImportantDay(page)
+      await expect(dayItem(page, '领证纪念日')).toContainText('公历每年5月27日（起始年2021）')
+
+      await dayItem(page, '领证纪念日').getByRole('button', { name: '编辑', exact: true }).click()
+      await expect(dayItem(page, '领证纪念日')).toContainText('正在编辑')
+      await page.getByLabel('名称').fill('不应保存')
+      await page.getByLabel('公历月').selectOption('6')
+      await page.getByLabel('公历日').selectOption('1')
+      await page.getByLabel('起始年（选填）').fill('2022')
+      await page.getByRole('button', { name: '取消', exact: true }).click()
+      await expect(page.getByText('正在编辑')).toHaveCount(0)
+      await expect(page.getByLabel('名称')).toHaveValue('')
+      await expect(addButton(page)).toBeVisible()
+      await expect(page.getByText('不应保存')).toHaveCount(0)
+      await expect(dayItem(page, '领证纪念日')).toContainText('公历每年5月27日（起始年2021）')
+      expect(await findDay(page, '领证纪念日')).toMatchObject({
+        title: '领证纪念日',
+        type: 'solar_anniversary',
+        solarMonth: 5,
+        solarDay: 27,
+        anniversaryYear: 2021,
+        festivalCode: null,
+      })
+    })
+
+    test('删除并持久化', async ({ page, playwright }) => {
+      await signIn(page, playwright)
+      await chooseSolarAnniversary(page, { title: '入职日', month: '3', day: '8' })
+      await submitImportantDay(page)
+      await expect(dayItem(page, '入职日')).toBeVisible()
+      await expect(addButton(page)).toBeEnabled()
+      await chooseSolarAnniversary(page, { title: '领证纪念日', month: '5', day: '27', year: '2021' })
+      await submitImportantDay(page)
+      await expect(dayItem(page, '入职日')).toBeVisible()
+      await expect(dayItem(page, '领证纪念日')).toBeVisible()
+
+      await dayItem(page, '入职日').getByRole('button', { name: '删除', exact: true }).click()
+      await expect(dayItem(page, '入职日')).toHaveCount(0)
+      await expect(dayItem(page, '领证纪念日')).toBeVisible()
+      expect(await findDay(page, '领证纪念日')).toMatchObject({
+        title: '领证纪念日',
+        type: 'solar_anniversary',
+        solarMonth: 5,
+        solarDay: 27,
+        anniversaryYear: 2021,
+        festivalCode: null,
+      })
+
+      await dayItem(page, '领证纪念日').getByRole('button', { name: '删除', exact: true }).click()
+      await expect(page.getByText('还没有重要日子')).toBeVisible()
+      await page.reload()
+      await expect(page.getByText('还没有重要日子')).toBeVisible()
+      expect(await listImportantDays(page)).toEqual([])
+    })
+
+    test('非法名称和起始年在本地拦截，不发送保存请求', async ({ page, playwright }) => {
+      await signIn(page, playwright)
+      let posts = 0
+      const handler = async (route: Route) => {
+        if (route.request().method() === 'POST') posts += 1
+        await route.continue()
+      }
+      await page.route(isImportantDayCollection, handler)
+      try {
+        const cases = [
+          { title: '   ', year: '', message: '请填写名称' },
+          { title: '日'.repeat(51), year: '', message: '名称不能超过 50 个字' },
+          { title: '年份', year: '0', message: '起始年须为 1 到 9999 的整数，或留空' },
+          { title: '年份', year: '10000', message: '起始年须为 1 到 9999 的整数，或留空' },
+          { title: '年份', year: '2026.5', message: '起始年须为 1 到 9999 的整数，或留空' },
+        ]
+        for (const item of cases) {
+          await chooseSolarAnniversary(page, { title: item.title, month: '1', day: '1', year: item.year })
+          await addButton(page).click()
+          await expect(page.getByText(item.message, { exact: true })).toBeVisible()
+          expect(posts).toBe(0)
+        }
+      } finally {
+        await page.unroute(isImportantDayCollection, handler)
+      }
+    })
+
+    test('未来起始年在新增和编辑时被拒绝，改回后可保存', async ({ page, playwright }) => {
+      const account = await registerAccount(playwright)
+      const epoch = beijingEpoch('2026-10-28')
+      await setServerClock(epoch)
+      await installBrowserClock(page, epoch)
+      await openLogin(page)
+      await login(page, account)
+      await openImportantDays(page)
+      await expectEditor(page)
+
+      await chooseSolarAnniversary(page, { title: '未来', month: '5', day: '27', year: '2027' })
+      await submitImportantDay(page)
+      await expect(page.getByText('起始年不能晚于当前公历年', { exact: true })).toBeVisible()
+      await expect(dayItem(page, '未来')).toHaveCount(0)
+      expect(await listImportantDays(page)).toEqual([])
+
+      await chooseSolarAnniversary(page, { title: '领证纪念日', month: '5', day: '27', year: '2021' })
+      await submitImportantDay(page)
+      await expect(dayItem(page, '领证纪念日')).toContainText('公历每年5月27日（起始年2021）')
+      const created = await findDay(page, '领证纪念日')
+      expect(created).toMatchObject({
+        title: '领证纪念日',
+        type: 'solar_anniversary',
+        solarMonth: 5,
+        solarDay: 27,
+        anniversaryYear: 2021,
+      })
+
+      await dayItem(page, '领证纪念日').getByRole('button', { name: '编辑', exact: true }).click()
+      await page.getByLabel('起始年（选填）').fill('2027')
+      await page.getByRole('button', { name: '保存', exact: true }).click()
+      await expect(page.getByText('起始年不能晚于当前公历年', { exact: true })).toBeVisible()
+      await expect(dayItem(page, '领证纪念日')).toContainText('公历每年5月27日（起始年2021）')
+      expect(await findDay(page, '领证纪念日')).toMatchObject({
+        id: created.id,
+        title: '领证纪念日',
+        type: 'solar_anniversary',
+        solarMonth: 5,
+        solarDay: 27,
+        anniversaryYear: 2021,
+      })
+
+      await page.getByLabel('起始年（选填）').fill('2022')
+      await page.getByRole('button', { name: '保存', exact: true }).click()
+      await expect(dayItem(page, '领证纪念日')).toContainText('公历每年5月27日（起始年2022）')
+      expect(await findDay(page, '领证纪念日')).toMatchObject({
+        id: created.id,
+        title: '领证纪念日',
+        type: 'solar_anniversary',
+        solarMonth: 5,
+        solarDay: 27,
+        anniversaryYear: 2022,
+      })
     })
   })
 
