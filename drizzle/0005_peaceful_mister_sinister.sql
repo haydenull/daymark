@@ -16,38 +16,38 @@ CREATE TABLE `__new_important_days` (
 	`updatedAt` integer DEFAULT (unixepoch()) NOT NULL,
 	FOREIGN KEY (`userId`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade,
 	CONSTRAINT "important_days_rule_chk" CHECK((
-        "__new_important_days"."type" = 'lunar_birthday'
-        AND "__new_important_days"."festivalCode" IS NULL
-        AND "__new_important_days"."lunarMonth" BETWEEN 1 AND 12
-        AND "__new_important_days"."lunarDay" BETWEEN 1 AND 30
-        AND "__new_important_days"."isLeapMonth" IN (0, 1)
-        AND ("__new_important_days"."birthYear" IS NULL OR "__new_important_days"."birthYear" BETWEEN 1 AND 9999)
-        AND "__new_important_days"."solarMonth" IS NULL
-        AND "__new_important_days"."solarDay" IS NULL
-        AND "__new_important_days"."anniversaryYear" IS NULL
+        "type" = 'lunar_birthday'
+        AND "festivalCode" IS NULL
+        AND "lunarMonth" BETWEEN 1 AND 12
+        AND "lunarDay" BETWEEN 1 AND 30
+        AND "isLeapMonth" IN (0, 1)
+        AND ("birthYear" IS NULL OR "birthYear" BETWEEN 1 AND 9999)
+        AND "solarMonth" IS NULL
+        AND "solarDay" IS NULL
+        AND "anniversaryYear" IS NULL
       ) OR (
-        "__new_important_days"."type" = 'festival'
-        AND "__new_important_days"."festivalCode" IS NOT NULL
-        AND "__new_important_days"."lunarMonth" IS NULL
-        AND "__new_important_days"."lunarDay" IS NULL
-        AND "__new_important_days"."isLeapMonth" IS NULL
-        AND "__new_important_days"."birthYear" IS NULL
-        AND "__new_important_days"."solarMonth" IS NULL
-        AND "__new_important_days"."solarDay" IS NULL
-        AND "__new_important_days"."anniversaryYear" IS NULL
+        "type" = 'festival'
+        AND "festivalCode" IS NOT NULL
+        AND "lunarMonth" IS NULL
+        AND "lunarDay" IS NULL
+        AND "isLeapMonth" IS NULL
+        AND "birthYear" IS NULL
+        AND "solarMonth" IS NULL
+        AND "solarDay" IS NULL
+        AND "anniversaryYear" IS NULL
       ) OR (
-        "__new_important_days"."type" = 'solar_anniversary'
-        AND "__new_important_days"."festivalCode" IS NULL
-        AND "__new_important_days"."lunarMonth" IS NULL
-        AND "__new_important_days"."lunarDay" IS NULL
-        AND "__new_important_days"."isLeapMonth" IS NULL
-        AND "__new_important_days"."birthYear" IS NULL
+        "type" = 'solar_anniversary'
+        AND "festivalCode" IS NULL
+        AND "lunarMonth" IS NULL
+        AND "lunarDay" IS NULL
+        AND "isLeapMonth" IS NULL
+        AND "birthYear" IS NULL
         AND (
-          ("__new_important_days"."solarMonth" IN (1, 3, 5, 7, 8, 10, 12) AND "__new_important_days"."solarDay" BETWEEN 1 AND 31)
-          OR ("__new_important_days"."solarMonth" IN (4, 6, 9, 11) AND "__new_important_days"."solarDay" BETWEEN 1 AND 30)
-          OR ("__new_important_days"."solarMonth" = 2 AND "__new_important_days"."solarDay" BETWEEN 1 AND 29)
+          ("solarMonth" IN (1, 3, 5, 7, 8, 10, 12) AND "solarDay" BETWEEN 1 AND 31)
+          OR ("solarMonth" IN (4, 6, 9, 11) AND "solarDay" BETWEEN 1 AND 30)
+          OR ("solarMonth" = 2 AND "solarDay" BETWEEN 1 AND 29)
         )
-        AND ("__new_important_days"."anniversaryYear" IS NULL OR "__new_important_days"."anniversaryYear" BETWEEN 1 AND 9999)
+        AND ("anniversaryYear" IS NULL OR "anniversaryYear" BETWEEN 1 AND 9999)
       ))
 );
 --> statement-breakpoint

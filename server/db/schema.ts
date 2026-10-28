@@ -32,46 +32,52 @@ export const importantDays = sqliteTable(
       .$defaultFn(() => new Date())
       .$onUpdateFn(() => new Date()),
   },
-  (table) => [
-    uniqueIndex('important_days_user_festival_uq').on(table.userId, table.festivalCode),
-    check(
-      'important_days_rule_chk',
-      sql`(
-        ${table.type} = 'lunar_birthday'
-        AND ${table.festivalCode} IS NULL
-        AND ${table.lunarMonth} BETWEEN 1 AND 12
-        AND ${table.lunarDay} BETWEEN 1 AND 30
-        AND ${table.isLeapMonth} IN (0, 1)
-        AND (${table.birthYear} IS NULL OR ${table.birthYear} BETWEEN 1 AND 9999)
-        AND ${table.solarMonth} IS NULL
-        AND ${table.solarDay} IS NULL
-        AND ${table.anniversaryYear} IS NULL
+  (table) => {
+    // CHECK 必须用不带表名前缀的列名。SQLite 会在 ALTER TABLE ... RENAME 时校验 CHECK 中的限定列名，
+    // drizzle-kit 表重建又会把约束写到临时表上，带前缀会在重命名时报 no such column。
+    const col = (column: { name: string }) => sql.identifier(column.name)
+
+    return [
+      uniqueIndex('important_days_user_festival_uq').on(table.userId, table.festivalCode),
+      check(
+        'important_days_rule_chk',
+        sql`(
+        ${col(table.type)} = 'lunar_birthday'
+        AND ${col(table.festivalCode)} IS NULL
+        AND ${col(table.lunarMonth)} BETWEEN 1 AND 12
+        AND ${col(table.lunarDay)} BETWEEN 1 AND 30
+        AND ${col(table.isLeapMonth)} IN (0, 1)
+        AND (${col(table.birthYear)} IS NULL OR ${col(table.birthYear)} BETWEEN 1 AND 9999)
+        AND ${col(table.solarMonth)} IS NULL
+        AND ${col(table.solarDay)} IS NULL
+        AND ${col(table.anniversaryYear)} IS NULL
       ) OR (
-        ${table.type} = 'festival'
-        AND ${table.festivalCode} IS NOT NULL
-        AND ${table.lunarMonth} IS NULL
-        AND ${table.lunarDay} IS NULL
-        AND ${table.isLeapMonth} IS NULL
-        AND ${table.birthYear} IS NULL
-        AND ${table.solarMonth} IS NULL
-        AND ${table.solarDay} IS NULL
-        AND ${table.anniversaryYear} IS NULL
+        ${col(table.type)} = 'festival'
+        AND ${col(table.festivalCode)} IS NOT NULL
+        AND ${col(table.lunarMonth)} IS NULL
+        AND ${col(table.lunarDay)} IS NULL
+        AND ${col(table.isLeapMonth)} IS NULL
+        AND ${col(table.birthYear)} IS NULL
+        AND ${col(table.solarMonth)} IS NULL
+        AND ${col(table.solarDay)} IS NULL
+        AND ${col(table.anniversaryYear)} IS NULL
       ) OR (
-        ${table.type} = 'solar_anniversary'
-        AND ${table.festivalCode} IS NULL
-        AND ${table.lunarMonth} IS NULL
-        AND ${table.lunarDay} IS NULL
-        AND ${table.isLeapMonth} IS NULL
-        AND ${table.birthYear} IS NULL
+        ${col(table.type)} = 'solar_anniversary'
+        AND ${col(table.festivalCode)} IS NULL
+        AND ${col(table.lunarMonth)} IS NULL
+        AND ${col(table.lunarDay)} IS NULL
+        AND ${col(table.isLeapMonth)} IS NULL
+        AND ${col(table.birthYear)} IS NULL
         AND (
-          (${table.solarMonth} IN (1, 3, 5, 7, 8, 10, 12) AND ${table.solarDay} BETWEEN 1 AND 31)
-          OR (${table.solarMonth} IN (4, 6, 9, 11) AND ${table.solarDay} BETWEEN 1 AND 30)
-          OR (${table.solarMonth} = 2 AND ${table.solarDay} BETWEEN 1 AND 29)
+          (${col(table.solarMonth)} IN (1, 3, 5, 7, 8, 10, 12) AND ${col(table.solarDay)} BETWEEN 1 AND 31)
+          OR (${col(table.solarMonth)} IN (4, 6, 9, 11) AND ${col(table.solarDay)} BETWEEN 1 AND 30)
+          OR (${col(table.solarMonth)} = 2 AND ${col(table.solarDay)} BETWEEN 1 AND 29)
         )
-        AND (${table.anniversaryYear} IS NULL OR ${table.anniversaryYear} BETWEEN 1 AND 9999)
+        AND (${col(table.anniversaryYear)} IS NULL OR ${col(table.anniversaryYear)} BETWEEN 1 AND 9999)
       )`,
-    ),
-  ],
+      ),
+    ]
+  },
 )
 
 export type ImportantDay = typeof importantDays.$inferSelect
