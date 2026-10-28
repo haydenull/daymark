@@ -7,6 +7,7 @@ import { festivalSamples, leapMonthShoesSamples, lunarSamples, sortSamples } fro
 import {
   chooseBirthday,
   chooseFestival,
+  chooseSolarAnniversary,
   dayItem,
   expectEditor,
   expectOccurrence,
@@ -179,6 +180,42 @@ test.describe('重要日子日期', () => {
       after.nextDate,
       daysBetween(after.today, after.nextDate),
     )
+  })
+
+  test('公历纪念日跨年，当天算这次', async ({ page, playwright }) => {
+    await signInAt(page, playwright, '2026-05-27')
+    await chooseSolarAnniversary(page, { title: '领证纪念日', month: '5', day: '27', year: '2021' })
+    await addAndSee(page, '领证纪念日')
+    await expectOccurrence(page, '领证纪念日', '公历每年5月27日（起始年2021）', '2026-05-27', 0)
+
+    await setServerClock(beijingEpoch('2026-05-28'))
+    await page.clock.setSystemTime(beijingEpoch('2026-05-28'))
+    await page.reload()
+    await expectOccurrence(
+      page,
+      '领证纪念日',
+      '公历每年5月27日（起始年2021）',
+      '2027-05-27',
+      daysBetween('2026-05-28', '2027-05-27'),
+    )
+  })
+
+  test('公历2月29日在闰年用29日，非闰年回退到2月28日', async ({ page, playwright }) => {
+    const ruleLabel = '公历每年2月29日，非闰年用2月28日（起始年2020）'
+    await signInAt(page, playwright, '2024-02-29')
+    await chooseSolarAnniversary(page, { title: '闰日', month: '2', day: '29', year: '2020' })
+    await addAndSee(page, '闰日')
+    await expectOccurrence(page, '闰日', ruleLabel, '2024-02-29', 0)
+
+    await setServerClock(beijingEpoch('2024-03-01'))
+    await page.clock.setSystemTime(beijingEpoch('2024-03-01'))
+    await page.reload()
+    await expectOccurrence(page, '闰日', ruleLabel, '2025-02-28', daysBetween('2024-03-01', '2025-02-28'))
+
+    await setServerClock(beijingEpoch('2027-03-01'))
+    await page.clock.setSystemTime(beijingEpoch('2027-03-01'))
+    await page.reload()
+    await expectOccurrence(page, '闰日', ruleLabel, '2028-02-29', daysBetween('2027-03-01', '2028-02-29'))
   })
 
   test('北京时间越过午夜后页面自动刷新', async ({ page, playwright }) => {

@@ -7,6 +7,7 @@ import {
   addButton,
   chooseBirthday,
   chooseFestival,
+  chooseSolarAnniversary,
   dayItem,
   expectApiStatus,
   expectEditor,
@@ -216,6 +217,81 @@ test.describe('重要日子', () => {
       await expect(page.getByText('还没有重要日子')).toBeVisible()
       await page.reload()
       await expect(page.getByText('还没有重要日子')).toBeVisible()
+      expect(await listImportantDays(page)).toEqual([])
+    })
+  })
+
+  test.describe('公历纪念日', () => {
+    test('新增、编辑并持久化', async ({ page, playwright }) => {
+      await signIn(page, playwright)
+      await chooseSolarAnniversary(page, { title: '领证纪念日', month: '5', day: '27', year: '2021' })
+      await submitImportantDay(page)
+      await expect(dayItem(page, '领证纪念日')).toContainText('公历每年5月27日（起始年2021）')
+      await expect(dayItem(page, '领证纪念日')).toContainText(/下次公历 \d{4}-\d{2}-\d{2}，(今天|剩余 \d+ 天)/)
+      const created = await findDay(page, '领证纪念日')
+      expect(created).toMatchObject({
+        title: '领证纪念日',
+        type: 'solar_anniversary',
+        birthYear: null,
+        lunarMonth: null,
+        lunarDay: null,
+        isLeapMonth: null,
+        festivalCode: null,
+        solarMonth: 5,
+        solarDay: 27,
+        anniversaryYear: 2021,
+      })
+
+      await dayItem(page, '领证纪念日').getByRole('button', { name: '编辑', exact: true }).click()
+      await expect(page.getByLabel('类型')).toHaveValue('solar_anniversary')
+      await expect(page.getByLabel('类型')).toBeDisabled()
+      await expect(page.getByLabel('名称')).toHaveValue('领证纪念日')
+      await expect(page.getByLabel('公历月')).toHaveValue('5')
+      await expect(page.getByLabel('公历日')).toHaveValue('27')
+      await expect(page.getByLabel('起始年（选填）')).toHaveValue('2021')
+      await page.getByLabel('公历日').selectOption('31')
+      await page.getByLabel('公历月').selectOption('2')
+      await expect(page.getByLabel('公历日')).toHaveValue('29')
+      await expect(page.getByLabel('公历日').locator('option')).toHaveCount(29)
+      await page.getByLabel('名称').fill('结婚纪念日')
+      await page.getByLabel('公历月').selectOption('6')
+      await page.getByLabel('公历日').selectOption('1')
+      await page.getByLabel('起始年（选填）').fill('')
+      await page.getByRole('button', { name: '保存', exact: true }).click()
+      await expect(dayItem(page, '结婚纪念日')).toContainText('公历每年6月1日')
+      expect(await findDay(page, '结婚纪念日')).toMatchObject({
+        id: created.id,
+        type: 'solar_anniversary',
+        title: '结婚纪念日',
+        solarMonth: 6,
+        solarDay: 1,
+        anniversaryYear: null,
+        festivalCode: null,
+      })
+      await page.reload()
+      await expect(dayItem(page, '结婚纪念日')).toBeVisible()
+    })
+
+    test('非闰起始年的2月29日和不可能的月日会被拒绝', async ({ page, playwright }) => {
+      await signIn(page, playwright)
+      await chooseSolarAnniversary(page, { title: '闰日', month: '2', day: '29', year: '2021' })
+      await submitImportantDay(page)
+      await expect(page.getByText('公历2021年没有2月29日', { exact: true })).toBeVisible()
+      await expect(dayItem(page, '闰日')).toHaveCount(0)
+
+      await expectApiStatus(
+        await page.request.post('/api/important-day', {
+          data: {
+            type: 'solar_anniversary',
+            title: '不存在',
+            anniversaryYear: null,
+            solarMonth: 4,
+            solarDay: 31,
+          },
+        }),
+        400,
+        '公历没有4月31日',
+      )
       expect(await listImportantDays(page)).toEqual([])
     })
   })
