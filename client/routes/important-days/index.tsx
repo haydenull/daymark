@@ -165,7 +165,7 @@ function ImportantDayEditor({ userId }: { userId: string }) {
                     下次公历 {item.nextDate}，{item.daysRemaining === 0 ? '今天' : `剩余 ${item.daysRemaining} 天`}
                   </p>
                 </div>
-                {item.type === 'lunar_birthday' ? (
+                {item.type === 'lunar_birthday' || item.type === 'solar_anniversary' ? (
                   <button
                     type="button"
                     className="text-sm text-zinc-500"

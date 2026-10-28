@@ -4,12 +4,15 @@ import { expect } from '@playwright/test'
 export type ImportantDayRecord = {
   id: number
   title: string
-  type: 'lunar_birthday' | 'festival'
+  type: 'lunar_birthday' | 'festival' | 'solar_anniversary'
   birthYear: number | null
   lunarMonth: number | null
   lunarDay: number | null
   isLeapMonth: boolean | null
   festivalCode: string | null
+  solarMonth: number | null
+  solarDay: number | null
+  anniversaryYear: number | null
   ruleLabel: string
   nextDate: string
   daysRemaining: number
@@ -34,6 +37,21 @@ export async function expectEditor(page: Page): Promise<void> {
 
 export function dayItem(page: Page, title: string): Locator {
   return page.getByRole('listitem').filter({ has: page.getByText(title, { exact: true }) })
+}
+
+type SolarAnniversaryFields = {
+  title: string
+  month: string
+  day: string
+  year?: string
+}
+
+export async function chooseSolarAnniversary(page: Page, fields: SolarAnniversaryFields): Promise<void> {
+  await page.getByLabel('类型').selectOption('solar_anniversary')
+  await page.getByLabel('名称').fill(fields.title)
+  await page.getByLabel('公历月').selectOption(fields.month)
+  await page.getByLabel('公历日').selectOption(fields.day)
+  await page.getByLabel('起始年（选填）').fill(fields.year ?? '')
 }
 
 export async function chooseBirthday(page: Page, fields: BirthdayFields): Promise<void> {

@@ -36,6 +36,14 @@ function ruleFromInput(input: ImportantDayInput): ImportantDayRule {
   if (input.type === 'festival') {
     return { type: 'festival', festivalCode: input.festivalCode }
   }
+  if (input.type === 'solar_anniversary') {
+    return {
+      type: 'solar_anniversary',
+      anniversaryYear: input.anniversaryYear,
+      solarMonth: input.solarMonth,
+      solarDay: input.solarDay,
+    }
+  }
   return {
     type: 'lunar_birthday',
     birthYear: input.birthYear,
@@ -51,6 +59,17 @@ function ruleFromRow(row: ImportantDay): ImportantDayRule {
       throw new Error('重要日子节日数据不完整')
     }
     return { type: 'festival', festivalCode: row.festivalCode }
+  }
+  if (row.type === 'solar_anniversary') {
+    if (row.solarMonth === null || row.solarDay === null) {
+      throw new Error('重要日子公历纪念日数据不完整')
+    }
+    return {
+      type: 'solar_anniversary',
+      anniversaryYear: row.anniversaryYear,
+      solarMonth: row.solarMonth,
+      solarDay: row.solarDay,
+    }
   }
   if (row.lunarMonth === null || row.lunarDay === null || row.isLeapMonth === null) {
     throw new Error('重要日子生日数据不完整')
@@ -75,6 +94,24 @@ function storedValues(userId: string, input: ImportantDayInput) {
       lunarDay: null,
       isLeapMonth: null,
       festivalCode: input.festivalCode,
+      solarMonth: null,
+      solarDay: null,
+      anniversaryYear: null,
+    }
+  }
+  if (input.type === 'solar_anniversary') {
+    return {
+      userId,
+      title: input.title,
+      type: input.type,
+      birthYear: null,
+      lunarMonth: null,
+      lunarDay: null,
+      isLeapMonth: null,
+      festivalCode: null,
+      solarMonth: input.solarMonth,
+      solarDay: input.solarDay,
+      anniversaryYear: input.anniversaryYear,
     }
   }
   return {
@@ -86,6 +123,9 @@ function storedValues(userId: string, input: ImportantDayInput) {
     lunarDay: input.lunarDay,
     isLeapMonth: input.isLeapMonth,
     festivalCode: null,
+    solarMonth: null,
+    solarDay: null,
+    anniversaryYear: null,
   }
 }
 
@@ -101,6 +141,9 @@ function toResponse(row: ImportantDay, now: Date): ImportantDayResponse {
     lunarDay: row.lunarDay,
     isLeapMonth: row.isLeapMonth,
     festivalCode: rule.type === 'festival' ? rule.festivalCode : null,
+    solarMonth: rule.type === 'solar_anniversary' ? rule.solarMonth : null,
+    solarDay: rule.type === 'solar_anniversary' ? rule.solarDay : null,
+    anniversaryYear: rule.type === 'solar_anniversary' ? rule.anniversaryYear : null,
     ruleLabel: describeRule(rule),
     nextDate: projected.nextDate,
     daysRemaining: projected.daysRemaining,
@@ -132,7 +175,7 @@ function assertFestivalAvailable(userId: string, input: ImportantDayInput) {
   }
 }
 
-function assertUpdatableBirthday(existing: ImportantDay, input: ImportantDayInput) {
+function assertUpdatable(existing: ImportantDay, input: ImportantDayInput) {
   if (existing.type === 'festival') {
     throw new HTTPException(400, { message: '节日不可修改' })
   }
@@ -310,7 +353,7 @@ export const importantDay = importantDayRoutes
       const { id } = c.req.valid('param')
       const input = c.req.valid('json')
       const existing = ownedDay(user.id, id)
-      assertUpdatableBirthday(existing, input)
+      assertUpdatable(existing, input)
       const now = new Date()
       assertKnownRule(input, now)
       const updated = db

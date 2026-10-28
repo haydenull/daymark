@@ -9,6 +9,8 @@ import { festivalDefinitions, isFestivalCode } from '@/shared/important-day/fest
 // 闰月生日只在该年确有对应闰月时用闰月，否则用普通同月，一年只出现一次。
 // 普通月生日不会落到闰月。三十在小月回退到廿九，但填写了出生年时，该年的原始日期必须真实存在，不能回退。
 // 闰月鞋只落在该年闰月的初十；没有闰月的年份跳过，不回退到普通月。
+// 公历纪念日按公历月日每年重复。2 月 29 日在非闰年回退到 2 月 28 日，保证每年都有一次。
+// 填写了起始年时，该公历年必须真实存在这一天，且不能晚于当前北京时间公历年。
 
 const BEIJING_OFFSET_MS = 8 * 60 * 60 * 1000
 
@@ -79,7 +81,16 @@ export type FestivalRule = {
   festivalCode: FestivalCode
 }
 
-export type ImportantDayRule = LunarBirthdayRule | FestivalRule
+export type SolarAnniversaryRule = {
+  type: 'solar_anniversary'
+  anniversaryYear: number | null
+  solarMonth: number
+  solarDay: number
+}
+
+export type ImportantDayRule = LunarBirthdayRule | FestivalRule | SolarAnniversaryRule
+
+const gregorianMonthLengths = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 
 export type NextOccurrence = {
   nextDate: string
@@ -105,6 +116,11 @@ export function describeRule(rule: ImportantDayRule): string {
   if (rule.type === 'festival') {
     return festivalDefinitions[rule.festivalCode].ruleLabel
   }
+  if (rule.type === 'solar_anniversary') {
+    const fallback = rule.solarMonth === 2 && rule.solarDay === 29 ? '，非闰年用2月28日' : ''
+    const year = rule.anniversaryYear === null ? '' : `（起始年${rule.anniversaryYear}）`
+    return `公历每年${rule.solarMonth}月${rule.solarDay}日${fallback}${year}`
+  }
   const leap = rule.isLeapMonth ? '闰' : ''
   const month = lunarMonthLabels[rule.lunarMonth - 1]
   const day = lunarDayLabels[rule.lunarDay - 1]
@@ -117,6 +133,10 @@ export function assertRule(rule: ImportantDayRule, now = new Date()): void {
     if (!isFestivalCode(rule.festivalCode)) throw new ImportantDayRuleError('未知节日')
     return
   }
+  if (rule.type === 'solar_anniversary') {
+    assertSolarAnniversary(rule.anniversaryYear, rule.solarMonth, rule.solarDay, now)
+    return
+  }
   if (rule.birthYear === null) return
   assertOriginalBirthday(rule.birthYear, rule.lunarMonth, rule.lunarDay, rule.isLeapMonth, solarToday(now))
 }
@@ -126,7 +146,9 @@ export function projectNext(rule: ImportantDayRule, now = new Date()): NextOccur
   const occurrence =
     rule.type === 'festival'
       ? nextFestival(rule.festivalCode, today)
-      : nextLunar(rule.lunarMonth, rule.lunarDay, rule.isLeapMonth, today)
+      : rule.type === 'solar_anniversary'
+        ? nextSolar(today, (year) => solarAnniversary(year, rule.solarMonth, rule.solarDay))
+        : nextLunar(rule.lunarMonth, rule.lunarDay, rule.isLeapMonth, today)
   const daysRemaining = occurrence.subtract(today)
   if (daysRemaining < 0) throw new Error('下一次日期早于今天')
   return {
@@ -225,6 +247,41 @@ function resolveMonthValue(lunarYear: number, month: number, isLeapMonth: boolea
   if (!isLeapMonth) return month
   const leapMonth = LunarYear.fromYear(lunarYear).getLeapMonth()
   return leapMonth === month ? -month : month
+}
+
+function isGregorianLeapYear(year: number): boolean {
+  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0
+}
+
+function daysInGregorianMonth(year: number, month: number): number {
+  if (month === 2 && isGregorianLeapYear(year)) return 29
+  return gregorianMonthLengths[month - 1] ?? 0
+}
+
+function maxSolarRuleDay(month: number): number {
+  if (month === 2) return 29
+  return gregorianMonthLengths[month - 1] ?? 0
+}
+
+function assertSolarAnniversary(year: number | null, month: number, day: number, now: Date): void {
+  if (month < 1 || month > 12 || day < 1 || day > maxSolarRuleDay(month)) {
+    throw new ImportantDayRuleError(`公历没有${month}月${day}日`)
+  }
+  if (year === null) return
+  const today = beijingToday(now)
+  if (year > today.year) {
+    throw new ImportantDayRuleError('起始年不能晚于当前公历年')
+  }
+  if (day > daysInGregorianMonth(year, month)) {
+    throw new ImportantDayRuleError(`公历${year}年没有${month}月${day}日`)
+  }
+}
+
+function solarAnniversary(year: number, month: number, day: number): SolarDay {
+  if (month === 2 && day === 29 && !isGregorianLeapYear(year)) {
+    return SolarDay.fromYmd(year, 2, 28)
+  }
+  return SolarDay.fromYmd(year, month, day)
 }
 
 function nthWeekday(year: number, month: number, weekday: number, nth: number): SolarDay {
